@@ -32,6 +32,7 @@ Environment variables (set in .env or Railway dashboard):
   CRYPTO_USDT_ADDRESS  USDT TRC-20 wallet address
   CRYPTO_SOL_ADDRESS   SOL wallet address
   CHANNEL_NAME         Display name shown in messages (default: Futures Signals)
+  CHANNEL_ID           Telegram channel ID for access gating, e.g. -1001234567890
   DB_PATH              SQLite path  (default: subscribers.db)
 """
 
@@ -46,6 +47,7 @@ from dotenv import load_dotenv
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
+    ChatJoinRequestHandler,
     CommandHandler,
     MessageHandler,
     PreCheckoutQueryHandler,
@@ -65,6 +67,7 @@ from src.payments import (
     successful_payment,
 )
 from src.admin import cmd_approve, cmd_deny, cmd_pending
+from src.channel import handle_join_request
 from src.server import make_app
 
 
@@ -139,6 +142,9 @@ async def run():
     tg_app.add_handler(CallbackQueryHandler(cb_confirm_usdt, pattern="^confirm_usdt$"))
     tg_app.add_handler(CallbackQueryHandler(cb_confirm_sol,  pattern="^confirm_sol$"))
     tg_app.add_handler(CallbackQueryHandler(cb_buy_manual,  pattern="^buy_manual$"))
+
+    # Channel join requests
+    tg_app.add_handler(ChatJoinRequestHandler(handle_join_request))
 
     # Stars payment flow
     tg_app.add_handler(PreCheckoutQueryHandler(pre_checkout))

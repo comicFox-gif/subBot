@@ -13,6 +13,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from .db import set_paid, subscribe, resolve_pending, get_pending_all, get_pending_for
+from .channel import grant_access
 
 logger  = logging.getLogger("subbot.admin")
 LINE    = "━" * 28
@@ -73,6 +74,9 @@ async def cmd_approve(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.warning(f"Could not notify {target_id}: {e}")
         user_notified = "⚠️ Could not notify user (they may not have started the bot)."
+
+    # Grant channel access
+    await grant_access(ctx.bot, target_id)
 
     await update.message.reply_html(
         f"✅ <b>Approved</b>  (<code>{target_id}</code>)\n"

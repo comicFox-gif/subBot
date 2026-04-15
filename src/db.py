@@ -47,11 +47,15 @@ def init_db():
                 status        TEXT    NOT NULL DEFAULT 'pending'
             )
         """)
-        # Migrate existing DBs that don't have the column yet
-        try:
-            conn.execute("ALTER TABLE subscribers ADD COLUMN subscription_expiry TEXT DEFAULT NULL")
-        except Exception:
-            pass
+        # Migrate existing DBs that don't have the columns yet
+        for col_sql in [
+            "ALTER TABLE subscribers ADD COLUMN subscription_expiry TEXT DEFAULT NULL",
+            "ALTER TABLE subscribers ADD COLUMN has_join_request INTEGER DEFAULT 0",
+        ]:
+            try:
+                conn.execute(col_sql)
+            except Exception:
+                pass
         conn.commit()
 
 
@@ -260,3 +264,26 @@ def resolve_pending(chat_id: int, status: str):
             (status, chat_id),
         )
         conn.commit()
+
+
+# ------------------------------------------------------------------
+# Channel join requests
+# ------------------------------------------------------------------
+
+def set_join_request(chat_id: int, value: bool):
+    """Record that this user has a pending channel join request."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE subscribers SET has_join_request = ? WHERE chat_id = ?",
+            (1 if value else 0, chat_id),
+        )
+        conn.commit()
+
+
+def has_join_request(chat_id: int) -> bool:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT has_join_request FROM subscribers WHERE chat_id = ?",
+            (chat_id,),
+        ).fetchone()
+        return bool(row and row["has_join_request"])

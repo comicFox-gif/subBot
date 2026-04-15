@@ -36,6 +36,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, U
 from telegram.ext import ContextTypes
 
 from .db import subscribe, set_paid, get_expiry, add_pending
+from .channel import grant_access
 
 logger = logging.getLogger("subbot.payments")
 
@@ -339,11 +340,13 @@ async def successful_payment(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Stars payment: {user.username or chat_id} — {stars} Stars — expires {expiry_str}")
 
     await update.message.reply_html(
-        f"🎉 <b>Subscription Activated!</b>\n"
+        f"🎉 <b>Payment Received!</b>\n"
         f"{LINE}\n"
         f"⭐ {stars} Stars received\n"
         f"📅 Active until: <b>{expiry_str}</b>\n"
         f"{LINE}\n"
-        f"You'll now receive all live trading signals here.\n"
-        f"Use /status to check your subscription anytime."
+        f"Granting channel access now..."
     )
+
+    # Grant channel access (approve join request or send invite link)
+    await grant_access(ctx.bot, chat_id)
