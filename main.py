@@ -67,7 +67,7 @@ from src.payments import (
     successful_payment,
 )
 from src.admin import cmd_approve, cmd_deny, cmd_pending
-from src.channel import handle_join_request
+from src.channel import handle_join_request, kick_expired_trials
 from src.server import make_app
 
 
@@ -145,6 +145,12 @@ async def run():
 
     # Channel join requests
     tg_app.add_handler(ChatJoinRequestHandler(handle_join_request))
+
+    # Hourly job: kick users whose free trial has expired
+    async def _kick_job(ctx: ContextTypes.DEFAULT_TYPE):
+        await kick_expired_trials(ctx.bot)
+
+    tg_app.job_queue.run_repeating(_kick_job, interval=3600, first=60)
 
     # Stars payment flow
     tg_app.add_handler(PreCheckoutQueryHandler(pre_checkout))

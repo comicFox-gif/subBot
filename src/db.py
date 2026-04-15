@@ -51,6 +51,9 @@ def init_db():
         for col_sql in [
             "ALTER TABLE subscribers ADD COLUMN subscription_expiry TEXT DEFAULT NULL",
             "ALTER TABLE subscribers ADD COLUMN has_join_request INTEGER DEFAULT 0",
+            "ALTER TABLE subscribers ADD COLUMN trial_expiry TEXT DEFAULT NULL",
+            "ALTER TABLE subscribers ADD COLUMN trial_used INTEGER DEFAULT 0",
+            "ALTER TABLE subscribers ADD COLUMN trial_kicked INTEGER DEFAULT 0",
         ]:
             try:
                 conn.execute(col_sql)
@@ -287,3 +290,61 @@ def has_join_request(chat_id: int) -> bool:
             (chat_id,),
         ).fetchone()
         return bool(row and row["has_join_request"])
+
+
+# ------------------------------------------------------------------
+# Free trial
+# ------------------------------------------------------------------
+
+def set_trial(chat_id: int, days: int = 7):
+    """Mark the trial as used and set its expiry."""
+    expiry = datetime.now(timezone.utc) + timedelta(days=days)
+    with _conn() as conn:
+        conn.execute(
+            """
+            UPDATE subscribers
+            SET trial_expiry = ?, trial_used = 1, trial_kicked = 0
+            WHERE chat_id = ?
+            """,
+            (expiry.isoformat(), chat_id),
+        )
+        conn.commit()
+    return expiry
+
+
+def has_used_trial(chat_id: int) -> bool:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT trial_used FROM subscribers WHERE chat_id = ?", (chat_id,)
+        ).fetchone()
+        return bool(row and row["trial_used"])
+
+
+def get_expired_trial_users() -> list[int]:
+    """
+    Users whose free trial has expired, haven't paid, and haven't been kicked yet.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    with _conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT chat_id FROM subscribers
+            WHERE trial_expiry IS NOT NULL
+              AND trial_expiry < ?
+              AND trial_kicked = 0
+              AND (
+                subscription_expiry IS NULL
+                OR subscription_expiry < ?
+              )
+            """,
+            (now, now),
+        ).fetchall()
+        return [r["chat_id"] for r in rows]
+
+
+def set_trial_kicked(chat_id: int):
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE subscribers SET trial_kicked = 1 WHERE chat_id = ?", (chat_id,)
+        )
+        conn.commit()
