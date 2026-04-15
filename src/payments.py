@@ -41,9 +41,9 @@ from .channel import grant_access
 logger = logging.getLogger("subbot.payments")
 
 # Config
-PRICE_STARS   = int(os.getenv("SUB_PRICE_STARS",   "100"))
+PRICE_STARS   = int(os.getenv("SUB_PRICE_STARS",   "1000"))
 DURATION_DAYS = int(os.getenv("SUB_DURATION_DAYS", "30"))
-PRICE_USD     = os.getenv("CRYPTO_PRICE_USD", "5")
+PRICE_USD     = os.getenv("CRYPTO_PRICE_USD", "20")
 ADMIN_ID      = int(os.getenv("ADMIN_CHAT_ID", "0"))
 
 WALLETS = {
@@ -65,7 +65,6 @@ def _method_keyboard() -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(f"⭐ Telegram Stars  ({PRICE_STARS} Stars)", callback_data="buy_stars")],
         [InlineKeyboardButton("₿ Pay with Crypto", callback_data="buy_crypto")],
-        [InlineKeyboardButton("📩 Manual / Contact Admin", callback_data="buy_manual")],
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -268,45 +267,6 @@ async def cb_confirm_usdt(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def cb_confirm_sol(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await _confirm_crypto(update, ctx, "sol")
-
-
-# ------------------------------------------------------------------
-# Callback: Manual payment
-# ------------------------------------------------------------------
-
-async def cb_buy_manual(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query   = update.callback_query
-    user    = query.from_user
-    chat_id = query.message.chat_id
-    await query.answer()
-
-    add_pending(chat_id, user.username, "manual")
-
-    # Notify admin
-    if ADMIN_ID:
-        username_str = f"@{user.username}" if user.username else f"ID {chat_id}"
-        await ctx.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=(
-                f"📩 <b>Manual Payment Request</b>\n"
-                f"{LINE}\n"
-                f"User: {username_str}  (<code>{chat_id}</code>)\n"
-                f"{DLINE}\n"
-                f"Approve:  /approve {chat_id}\n"
-                f"Deny:     /deny {chat_id}"
-            ),
-            parse_mode="HTML",
-        )
-
-    await query.edit_message_text(
-        f"📩 <b>Request Sent!</b>\n"
-        f"{LINE}\n"
-        f"The admin has been notified.\n"
-        f"You'll receive a message here once your subscription is activated.\n\n"
-        f"<i>For faster support, contact the admin directly.</i>",
-        parse_mode="HTML",
-    )
-    logger.info(f"Manual payment request: {user.username or chat_id}")
 
 
 # ------------------------------------------------------------------

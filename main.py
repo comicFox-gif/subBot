@@ -64,7 +64,6 @@ from src.payments import (
     cb_buy_crypto,
     cb_buy_btc, cb_buy_eth, cb_buy_usdt, cb_buy_sol,
     cb_confirm_btc, cb_confirm_eth, cb_confirm_usdt, cb_confirm_sol,
-    cb_buy_manual,
     pre_checkout,
     successful_payment,
 )
@@ -147,7 +146,6 @@ async def run():
     tg_app.add_handler(CallbackQueryHandler(cb_confirm_eth,  pattern="^confirm_eth$"))
     tg_app.add_handler(CallbackQueryHandler(cb_confirm_usdt, pattern="^confirm_usdt$"))
     tg_app.add_handler(CallbackQueryHandler(cb_confirm_sol,  pattern="^confirm_sol$"))
-    tg_app.add_handler(CallbackQueryHandler(cb_buy_manual,  pattern="^buy_manual$"))
 
     # Channel join requests
     tg_app.add_handler(ChatJoinRequestHandler(handle_join_request))
