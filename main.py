@@ -44,6 +44,7 @@ from pathlib import Path
 
 from aiohttp import web
 from dotenv import load_dotenv
+from telegram import BotCommand
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -56,7 +57,7 @@ from telegram.ext import (
 )
 
 from src.db import init_db
-from src.handlers import cmd_start, cmd_stop, cmd_status, cmd_stats
+from src.handlers import cmd_start, cmd_stop, cmd_status, cmd_stats, cb_get_access, cb_my_status
 from src.payments import (
     cmd_buy,
     cb_buy_stars,
@@ -130,6 +131,10 @@ async def run():
     tg_app.add_handler(CommandHandler("deny",    cmd_deny))
     tg_app.add_handler(CommandHandler("pending", cmd_pending))
 
+    # Navigation button callbacks
+    tg_app.add_handler(CallbackQueryHandler(cb_get_access,  pattern="^get_access$"))
+    tg_app.add_handler(CallbackQueryHandler(cb_my_status,   pattern="^my_status$"))
+
     # Payment method menu callbacks
     tg_app.add_handler(CallbackQueryHandler(cmd_buy,        pattern="^buy$"))
     tg_app.add_handler(CallbackQueryHandler(cb_buy_stars,   pattern="^buy_stars$"))
@@ -158,6 +163,15 @@ async def run():
     tg_app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
 
     await tg_app.initialize()
+
+    # Set bot command menu (shown when user taps the "/" button)
+    await tg_app.bot.set_my_commands([
+        BotCommand("start",  "Join channel / check trial"),
+        BotCommand("status", "Check your subscription status"),
+        BotCommand("buy",    "Subscribe or extend subscription"),
+        BotCommand("stop",   "Unsubscribe"),
+    ])
+
     await tg_app.start()
     await tg_app.updater.start_polling(drop_pending_updates=True)
     logger.info("Telegram bot polling started")

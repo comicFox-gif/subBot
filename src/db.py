@@ -320,6 +320,26 @@ def has_used_trial(chat_id: int) -> bool:
         return bool(row and row["trial_used"])
 
 
+def get_trial_expiry(chat_id: int) -> datetime | None:
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT trial_expiry FROM subscribers WHERE chat_id = ?", (chat_id,)
+        ).fetchone()
+        if row and row["trial_expiry"]:
+            try:
+                return datetime.fromisoformat(row["trial_expiry"])
+            except ValueError:
+                return None
+        return None
+
+
+def is_trial_active(chat_id: int) -> bool:
+    expiry = get_trial_expiry(chat_id)
+    if expiry is None:
+        return False
+    return expiry > datetime.now(timezone.utc)
+
+
 def get_expired_trial_users() -> list[int]:
     """
     Users whose free trial has expired, haven't paid, and haven't been kicked yet.

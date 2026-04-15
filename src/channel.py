@@ -191,14 +191,14 @@ async def grant_access(bot: Bot, chat_id: int):
             # Join request expired — fall back to invite link
             logger.warning(f"approve_chat_join_request failed for {chat_id}: {e} — sending invite link")
             set_join_request(chat_id, False)
-            await _send_invite_link(bot, chat_id)
+            await send_invite_link(bot, chat_id)
         except TelegramError as e:
             logger.warning(f"Could not approve join request for {chat_id}: {e}")
     else:
-        await _send_invite_link(bot, chat_id)
+        await send_invite_link(bot, chat_id)
 
 
-async def _send_invite_link(bot: Bot, chat_id: int):
+async def send_invite_link(bot: Bot, chat_id: int):
     """Create a single-use invite link and send it to the user."""
     try:
         expiry = datetime.now(timezone.utc) + timedelta(hours=24)
